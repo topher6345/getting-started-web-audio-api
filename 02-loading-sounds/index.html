@@ -3,7 +3,6 @@
 </head>
   <body>
     <button onclick="source.start(0);">Start</button>
-    <button onclick="source.stop();">Stop</button>
 
     <script>
  //That one url you wanted.
@@ -31,7 +30,6 @@
       //set the buffer to the response we just received.
       source.buffer = response;
       //And off we go! .start(0) should play asap.
-      source.loop = true;
 
     }, function () { console.error('The request failed.'); } );
   }

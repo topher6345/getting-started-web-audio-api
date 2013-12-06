@@ -2,7 +2,10 @@
 <head>
 </head>
   <body>
-    <button onclick="RhythmSample.play();">Start</button>
+<input type="button" onclick="VolumeSample.toggle();" value="Play/Pause"/>
+<br>
+ <input type="range" min="0" max="100" value="100" oninput="VolumeSample.changeVolume(this);" />
+
 <script>
 
 function BufferLoader(context, urlList, callback) {
@@ -59,9 +62,7 @@ var context = null;
 
 // An object to track the buffers to load {name: path}
 var BUFFERS_TO_LOAD = {
-  kick: 'kick.wav',
-  snare: 'snare.wav',
-  hihat: 'hihat.wav',
+  techno: 'techno.wav'
 };
 
 // Loads all sound samples into the buffers object.
@@ -96,45 +97,48 @@ document.addEventListener('DOMContentLoaded', function() {
   loadBuffers();
 });
 
-var RhythmSample = {
+var VolumeSample = {
 };
 
-RhythmSample.play = function() {
-  function playSound(buffer, time) {
-    var source = context.createBufferSource();
-    source.buffer = buffer;
-    source.connect(context.destination);
-    if (!source.start)
-      source.start = source.noteOn;
-    source.start(time);
-  }
+// Gain node needs to be mutated by volume control.
+VolumeSample.gainNode = null;
 
-  var kick = BUFFERS.kick;
-  var snare = BUFFERS.snare;
-  var hihat = BUFFERS.hihat;
+VolumeSample.play = function() {
+  if (!context.createGain)
+    context.createGain = context.createGainNode;
+  this.gainNode = context.createGain();
+  var source = context.createBufferSource();
+  source.buffer = BUFFERS.techno;
 
-  // We'll start playing the rhythm 100 milliseconds from "now"
-  var startTime = context.currentTime + 0.100;
-  var tempo = 80; // BPM (beats per minute)
-  var eighthNoteTime = (60 / tempo) / 2;
-  var sixteenthNoteTime = (60 / tempo) / 4;
+  // Connect source to a gain node
+  source.connect(this.gainNode);
+  // Connect gain node to destination
+  this.gainNode.connect(context.destination);
+  // Start playback in a loop
+  source.loop = true;
+  if (!source.start)
+    source.start = source.noteOn;
+  source.start(0);
+  this.source = source;
+};
 
-  // Play 2 bars of the following:
-  for (var bar = 0; bar < 1; bar++) {
-    var time = startTime + bar * 8 * eighthNoteTime;
-    // Play the bass (kick) drum on beats 1, 5
-    playSound(kick, time);
-    playSound(kick, time + 4 * eighthNoteTime);
+VolumeSample.changeVolume = function(element) {
+  var volume = element.value;
+  var fraction = parseInt(element.value) / parseInt(element.max);
+  // Let's use an x*x curve (x-squared) since simple linear (x) does not
+  // sound as good.
+  this.gainNode.gain.value = fraction * fraction;
+};
 
-    // Play the snare drum on beats 3, 7
-    playSound(snare, time + 2 * eighthNoteTime);
-    playSound(snare, time + 6 * eighthNoteTime);
+VolumeSample.stop = function() {
+  if (!this.source.stop)
+    this.source.stop = source.noteOff;
+  this.source.stop(0);
+};
 
-    // Play the hi-hat every eighthh note.
-    for (var i = 0; i < 16; ++i) {
-      playSound(hihat, time + i * sixteenthNoteTime);
-    }
-  }
+VolumeSample.toggle = function() {
+  this.playing ? this.stop() : this.play();
+  this.playing = !this.playing;
 };
 
 </script>
